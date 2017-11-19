@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Mion</string>
+
+    <string-array name="image_ids">
+        <item>@drawable/sample_0</item>
+        <item>@drawable/sample_1</item>
+        <item>@drawable/sample_2</item>
+        <item>@drawable/sample_3</item>
+        <item>@drawable/sample_4</item>
+        <item>@drawable/sample_5</item>
+        <item>@drawable/sample_6</item>
+        <item>@drawable/sample_7</item>
+    </string-array>
+</resources>

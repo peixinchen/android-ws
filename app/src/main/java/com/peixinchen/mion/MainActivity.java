@@ -1,7 +1,14 @@
 package com.peixinchen.mion;
 
+import android.Manifest;
+import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.os.Environment;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -12,15 +19,24 @@ import android.widget.ImageView;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import com.peixinchen.mion.api.GetArtifactPublicities;
+import com.peixinchen.mion.models.ShareImageItem;
+import com.peixinchen.mion.models.SharedItem;
+import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Target;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener, RadioGroup.OnCheckedChangeListener, GetArtifactPublicities.Monitor {
+public class MainActivity extends AppCompatActivity implements RadioGroup.OnCheckedChangeListener, GetArtifactPublicities.Monitor {
     private GridViewAdapter gridViewAdapter;
     private GetArtifactPublicities.ArtifactPublicity result;
+    private SharedItem sharedItem = new SharedItem();
+    private List<ShareImageItem> shareImageItemList = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,7 +49,6 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
         GridView gridView = (GridView) findViewById(R.id.gridView);
         gridViewAdapter = new GridViewAdapter(this, R.layout.grid_view_item_layout);
         gridView.setAdapter(gridViewAdapter);
-        gridView.setOnItemClickListener(this);
 
         GetArtifactPublicities api = new GetArtifactPublicities();
         api.setMonitor(this);
@@ -43,20 +58,73 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
     // UI Listeners
     @Override
     public void onCheckedChanged(RadioGroup group, int checkedId) {
-        Log.d("API", result.taglines[checkedId]);
+        String tagline = result.taglines[checkedId];
+        Log.d("API", tagline);
+        sharedItem.tagline = tagline;
     }
 
-    @Override
-    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        ImageView imageView = view.findViewById(R.id.imageView);
-        BitmapDrawable drawable = (BitmapDrawable) imageView.getDrawable();
-        Bitmap bitmap = drawable.getBitmap();
-
-        Log.d("API", bitmap.toString());
+    public void onCheckboxClicked(View view) {
+        int position = (int)view.getTag();
+        ShareImageItem shareImageItem = shareImageItemList.get(position);
+        if (shareImageItem.isChecked == false) {
+            shareImageItem.isChecked = true;
+            if (sharedItem.imageUrlList.contains(shareImageItem.imageUrl) == false) {
+                sharedItem.imageUrlList.add(shareImageItem.imageUrl);
+            }
+        } else {
+            shareImageItem.isChecked = false;
+            if (sharedItem.imageUrlList.contains(shareImageItem.imageUrl) == true) {
+                sharedItem.imageUrlList.remove(shareImageItem.imageUrl);
+            }
+        }
     }
 
     public void onShareButtonClick(View view) {
-        WechatShareUtil.share();
+        int permission = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    999);
+            return;
+        }
+
+        final List<String> filenameList = new ArrayList<>();
+        for (String imageUrl: sharedItem.imageUrlList) {
+            Picasso.with(this)
+                    .load(imageUrl)
+                    .into(new Target() {
+                        @Override
+                        public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
+                            try {
+                                File file = File.createTempFile("moin_", ".jpg", Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES));
+                                Log.d("API", file.getAbsolutePath());
+                                FileOutputStream os = new FileOutputStream(file);
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 75, os);
+                                os.close();
+
+                                synchronized (this) {
+                                    filenameList.add(file.getAbsolutePath());
+                                    if (filenameList.size() != sharedItem.imageUrlList.size()) {
+                                        return;
+                                    }
+                                }
+
+                                WechatShareUtil.share(MainActivity.this, sharedItem.tagline, filenameList);
+
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        @Override
+                        public void onBitmapFailed(Drawable errorDrawable) {
+                        }
+
+                        @Override
+                        public void onPrepareLoad(Drawable placeHolderDrawable) {
+                        }
+                    });
+        }
+        //WechatShareUtil.share();
     }
 
     // api.GetArtifactPublicities.Monitor
@@ -85,7 +153,12 @@ public class MainActivity extends AppCompatActivity implements AdapterView.OnIte
             radioGroup.addView(radioButton);
         }
 
-        gridViewAdapter.addAll(Arrays.asList(result.imageUrls));
+        for (String imageUrl: result.imageUrls) {
+            ShareImageItem shareImageItem = new ShareImageItem(false, imageUrl);
+            shareImageItemList.add(shareImageItem);
+        }
+
+        gridViewAdapter.addAll(shareImageItemList);
     }
 
     @Override

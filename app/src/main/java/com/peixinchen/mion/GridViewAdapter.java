@@ -12,11 +12,12 @@ import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.ImageView;
 
+import com.peixinchen.mion.models.ShareImageItem;
 import com.squareup.picasso.Picasso;
 
 import java.util.List;
 
-class GridViewAdapter extends ArrayAdapter<String> {
+class GridViewAdapter extends ArrayAdapter<ShareImageItem> {
     private Context context;
     private int resource;
 
@@ -36,9 +37,12 @@ class GridViewAdapter extends ArrayAdapter<String> {
             view = inflater.inflate(resource, parent,false);
         }
 
-        String imageUrl = (String) this.getItem(position);
+        ShareImageItem shareImageItem = (ShareImageItem) this.getItem(position);
+        CheckBox checkBox = (CheckBox) view.findViewById(R.id.checkBox);
+        checkBox.setTag(position);
+        checkBox.setChecked(shareImageItem.isChecked);
         Picasso.with(context)
-                .load(imageUrl)
+                .load(shareImageItem.imageUrl)
                 .into((ImageView) view.findViewById(R.id.imageView));
 
         return view;

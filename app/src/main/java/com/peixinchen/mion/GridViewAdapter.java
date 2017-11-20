@@ -1,6 +1,7 @@
 package com.peixinchen.mion;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.util.Log;
@@ -11,7 +12,7 @@ import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.ImageView;
 
-import com.bumptech.glide.Glide;
+import com.squareup.picasso.Picasso;
 
 import java.util.List;
 
@@ -30,29 +31,16 @@ class GridViewAdapter extends ArrayAdapter<String> {
     @Override
     public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
         View view = convertView;
-        ViewHolder viewHolder;
-
         if (view == null) {
-            LayoutInflater layoutInflater = LayoutInflater.from(context);
-            view = layoutInflater.inflate(resource, parent, false);
-
-            viewHolder = new ViewHolder();
-            viewHolder.imageView = (ImageView) view.findViewById(R.id.imageView);
-            view.setTag(viewHolder);
-        } else {
-            viewHolder = (ViewHolder) view.getTag();
+            LayoutInflater inflater = LayoutInflater.from(context);
+            view = inflater.inflate(resource, parent,false);
         }
 
         String imageUrl = (String) this.getItem(position);
-        Log.d("API", String.format("%d: %s", position, imageUrl));
-        Glide.with(context)
+        Picasso.with(context)
                 .load(imageUrl)
-                .into(viewHolder.imageView);
+                .into((ImageView) view.findViewById(R.id.imageView));
 
         return view;
-    }
-
-    static class ViewHolder {
-        ImageView imageView;
     }
 }
